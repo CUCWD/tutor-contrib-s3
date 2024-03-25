@@ -1,0 +1,5 @@
+{% if S3_ENABLE_S3_STATIC_FILES %}
+# Not doing this on `openedx` image build, but rather after using tutor `init`.
+# Move files from staticfiles to s3 
+# RUN bash /openedx/bin/send-staticfiles-to-s3 -d "/openedx/staticfiles" -b "{{ S3_UTILS_S3CMD_BUCKET }}" -p "static"
+{% endif %}

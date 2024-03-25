@@ -1,0 +1,15 @@
+{% if S3_ENABLE_S3_STATIC_FILES %}
+# Install aws cli
+RUN apt install unzip && \
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+  unzip awscliv2.zip && \
+  ./aws/install --bin-dir /openedx/bin --install-dir /openedx/aws-cli && rm -r aws awscliv2.zip
+
+# Install s3cmd
+# https://pypi.org/project/s3cmd/
+# https://www.digitalocean.com/community/tutorials/how-to-use-logrotate-and-s3cmd-to-archive-logs-to-object-storage-on-ubuntu-16-04 
+RUN pip install s3cmd==2.3.0
+
+# Install python library for Microsoft Teams Webhooks.
+RUN pip install pymsteams>=0.2.2
+{% endif %}

@@ -1,0 +1,153 @@
+{% set lb = '{' %}
+{% set rb = '}' %}
+#!/bin/bash
+#
+#  This script is called to sync openedx statifiles manually to s3
+#
+
+# For now running this as non-root account `app`.
+# if (( $EUID != 0 )); then
+#     echo "Please run as the root user"
+#     exit 1
+# fi
+
+#
+# Ensure the log processors can read without
+# running as root
+# Update: Because we're not running as root but `app` user we'll just
+# create this file if it doesn't exist.
+# The old configuration repo https://github.com/openedx/configuration/blob/open-release/hawthorn.master/playbooks/roles/common/tasks/main.yml#L74
+# mentioned something about installing `rsyslog` to ensure the `syslog` users
+# is available. After look at tutor local install I dont' see that rsyslog 
+# command or even the `syslog` user. Ignoring this for now.
+if [ ! -f "{{ S3_AWS_LOGFILE }}" ]; then
+  touch "{{ S3_AWS_LOGFILE }}"
+# else
+  # chown syslog.syslog "{{ S3_AWS_LOGFILE }}"
+fi
+
+# Output to file and console
+exec > >(tee -a "{{ S3_AWS_LOGFILE }}")
+exec 2>&1
+
+# s3cmd sync requires a valid home
+# directory
+export HOME=/
+
+shopt -s extglob
+
+usage() {
+
+  cat<<EO
+
+  A wrapper of s3cmd sync that will sync files to
+  an s3 bucket.
+
+  Usage: $PROG
+            -v    add verbosity (set -x)
+            -n    echo what will be done
+            -h    this
+            -d    directory to sync
+            -b    bucket path to sync to
+            -p    name prefix
+            -rsf  remove source *.gz on upload to s3 bucket
+EO
+}
+
+while getopts "vhnb:d:p:rsf" opt; do
+  case $opt in
+    v)
+      set -x
+      shift
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    n)
+      noop="echo Would have run: "
+      shift
+      ;;
+    d)
+      directory=$OPTARG
+      ;;
+    b)
+      bucket=$OPTARG
+      ;;
+    p)
+      prefix=$OPTARG
+      ;;
+  esac
+done
+
+if [[ -z $bucket || -z $directory ]]; then
+  echo "ERROR: You must provide a directory and a bucket to sync!"
+  usage
+  exit 1
+fi
+
+# grab the first security group for the instance
+# which will be used as a directory name in the s3
+# bucket
+
+set -e
+
+sec_grp=unset
+instance_id=unset
+s3_path=unset
+
+# Activate the python virtual env
+source /openedx/venv/bin/activate
+
+onerror() {
+  if [[ -z $noop ]]; then
+    # Send MS Teams message on error.
+    python /openedx/bin/ms-teams-chat-post.py
+  else
+    echo "Don't send out Teams message"
+  fi
+}
+
+trap onerror ERR SIGHUP SIGINT SIGTERM
+
+# Export environment variables for AWS instance this tutor plugin is running on.
+eval `python {{ S3_UTILS_OUTPUT_DIRECTORY }}/export_aws_metadata.py`
+
+# Grab AWS EC2 instance id and private IPv4 address.
+if [[ -z $AWS_INSTANCE_ID ]]; then
+  instance_id="SET_ME_PLEASE"
+else
+  instance_id=$AWS_INSTANCE_ID
+fi
+
+if [[ -z $AWS_LOCAL_IPV4 ]]; then
+  ip="SET_ME_PLEASE"
+else
+  ip=$AWS_LOCAL_IPV4
+fi
+
+# Setup IAM Access id and secret
+{% if S3_AWS_STATICFILES_ACCESS_KEY_ID %}
+auth_opts="--access_key {{ S3_AWS_STATICFILES_ACCESS_KEY_ID }} --secret_key {{ S3_AWS_STATICFILES_SECRET_KEY }}"
+{% else %}
+auth_opts=""
+{% endif %}
+
+# Build out AWS S3 bucket path based on AWS EC2 instance id and private IPv4 address.
+# s3_path="s3://${bucket}/${prefix}/${instance_id}–${ip}/"
+s3_path="s3://${bucket}/${prefix}/"
+
+# Missing '--remove-source-files' option for 's3cmd sync'
+# Using 's3cmd put' instead and verifying the upload was successful.
+$noop {{ S3_UTILS_S3CMD }} $auth_opts --recursive --follow-symlinks put $directory/* "${s3_path}"
+
+# for FILE in $(find $directory/* -type f); do
+#   $noop {{ S3_UTILS_S3CMD }} $auth_opts --multipart-chunk-size-mb 5120 --disable-multipart put "$FILE" "${s3_path}"
+#   if [ $? -eq 0 ]; then
+#     echo "$FILE successfully uploaded at $(date +'%d-%m-%Y-%H-%M-%S')"
+#   else
+#     echo "$FILE ERROR: failed to upload file $FILE at $(date +'%d-%m-%Y-%H-%M-%S')" 
+#     exit 1
+#   fi
+# done
+

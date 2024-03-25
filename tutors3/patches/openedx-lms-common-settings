@@ -11,3 +11,8 @@ PROFILE_IMAGE_BACKEND = {
     },
 }
 {% endif %}
+
+{% if S3_ENABLE_S3_STATIC_FILES %}
+# Static files path
+STATIC_URL = "{{ "https" if S3_USE_SSL else "http" }}://{{ S3_CUSTOM_DOMAIN }}/static/"
+{% endif %}
