@@ -1,0 +1,25 @@
+{% if S3_ENABLE_S3_STATIC_FILES %}
+# Copy aws cli
+COPY --chown=app:app --from=python-requirements /openedx/aws-cli /openedx/aws-cli
+
+# Copy s3cmd configuration and script for logrotate. Setup s3cmd configuration.
+COPY --chown=app:app ./plugins/s3/build/s3cmd/send-staticfiles-to-s3 /openedx/bin/send-staticfiles-to-s3
+COPY --chown=app:app ./plugins/s3/build/s3cmd/s3cfg {{ S3_UTILS_S3CMD_CONFIG }}
+RUN chmod a+x /openedx/bin/send-staticfiles-to-s3
+# ENV PATH /openedx/bin:${PATH}
+
+# Copy script to notify devops via MS Teams
+COPY --chown=app:app ./plugins/s3/build/notify/ms-teams-chat-post.py /openedx/bin/ms-teams-chat-post.py
+RUN chmod a+x /openedx/bin/ms-teams-chat-post.py
+
+# Create output directory for `utils` plugin for tracking purposes of
+# logrotate state and s3cmd tracking information.
+RUN mkdir -p {{ S3_UTILS_OUTPUT_DIRECTORY }}
+
+# Create output directory for syncing openedx staticfiles to S3
+# RUN mkdir -p {{ S3_UTILS_OUTPUT_DIRECTORY_SYNC_TO_S3 }}
+
+# Copy in our entrypoint script
+COPY --chown=app:app ./plugins/s3/build/entrypoint/* {{ S3_UTILS_OUTPUT_DIRECTORY }}/
+RUN chmod a+x {{ S3_UTILS_OUTPUT_DIRECTORY }}/*
+{% endif %}

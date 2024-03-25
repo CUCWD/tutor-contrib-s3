@@ -1,0 +1,14 @@
+
+{% if S3_ENABLE_S3_STATIC_FILES %}
+export AWS_ACCESS_KEY_ID='{{S3_AWS_STATICFILES_ACCESS_KEY_ID}}'
+export AWS_SECRET_ACCESS_KEY='{{S3_AWS_STATICFILES_SECRET_KEY}}'
+
+{% if S3_HOST %}
+/openedx/aws-cli/v2/current/bin/aws s3 sync --follow-symlinks /openedx/staticfiles/ s3://{{S3_STATIC_FILES_BUCKET_NAME}}/static/ --endpoint-url="https://{{S3_HOST}}"
+{% else %}
+/openedx/aws-cli/v2/current/bin/aws s3 sync --follow-symlinks /openedx/staticfiles/ s3://{{S3_STATIC_FILES_BUCKET_NAME}}/static/
+{% endif %}
+{% endif %}
+
+# Ignore this s3cmd for now. Using `aws s3 sync` instead due to upload performance improvement.
+# bash /openedx/bin/send-staticfiles-to-s3 -d "/openedx/staticfiles" -b "{{ S3_UTILS_S3CMD_BUCKET }}" -p "static"
