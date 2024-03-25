@@ -1,2 +1,7 @@
 COURSE_IMPORT_EXPORT_STORAGE = DEFAULT_FILE_STORAGE
 USER_TASKS_ARTIFACT_STORAGE = DEFAULT_FILE_STORAGE
+
+{% if S3_ENABLE_S3_STATIC_FILES %}
+# Static files path (slightly differant than the LMS with `/studio` at the end.)
+STATIC_URL = "{{ "https" if S3_USE_SSL else "http" }}://{{ S3_CUSTOM_DOMAIN }}/static/studio/"
+{% endif %}
