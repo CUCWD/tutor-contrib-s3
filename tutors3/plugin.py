@@ -17,7 +17,7 @@ config = {
         "PORT": "",
         "REGION": "us-east-1",
         "USE_SSL": True,
-        "STORAGE_BUCKET": "educateworkforce-private",
+        "STORAGE_BUCKET": "SET_ME_PLEASE",
         "FILE_UPLOAD_BUCKET": "{{ S3_STORAGE_BUCKET }}",
         "PROFILE_IMAGE_BUCKET": "educateworkforce-public",
         "GRADE_BUCKET": "{{ S3_STORAGE_BUCKET }}",
