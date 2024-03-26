@@ -17,7 +17,7 @@ config = {
         "PORT": "",
         "REGION": "",
         "USE_SSL": True,
-        "STORAGE_BUCKET": "openedx",
+        "STORAGE_BUCKET": "SET_ME_PLEASE",
         "FILE_UPLOAD_BUCKET": "{{ S3_STORAGE_BUCKET }}",
         "PROFILE_IMAGE_BUCKET": "",
         "GRADE_BUCKET": "{{ S3_STORAGE_BUCKET }}",
